@@ -228,9 +228,11 @@ log1 = Logger . (:. Nil)
 -- >>> distinctG $ listh [1,2,3,2,6,106]
 -- Logger ["even number: 2","even number: 2","even number: 6","aborting > 100: 106"] Empty
 distinctG :: (Integral a, Show a) => List a -> Logger Chars (Optional (List a))
-distinctG l = evalT (filtering fun l) S.empty where
-  fun :: Integral k => a -> StateT (S.Set k) (OptionalT (Logger Chars)) Bool
-  fun a = StateT $ \s -> let l = "hello"
-                             res = if a > 100 then Empty
-                                   else Full (S.notMember a s, S.insert a s)
-                         in OptionalT (Logger l res)
+distinctG l = runOptionalT $ evalT (filtering p l) S.empty where
+  p a = StateT $ \s -> let sa = listh (show a)
+                           r | a > 100 = Empty
+                             | otherwise = Full (S.notMember a s, S.insert a s)
+                           log | a > 100 = ("aborting > 100: " ++ sa) :. Nil
+                               | even a = ("even number: " ++ sa) :. Nil
+                               | otherwise = Nil
+                       in OptionalT $ Logger log r
