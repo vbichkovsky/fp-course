@@ -80,10 +80,9 @@ data Op =
 -- /Tip:/ @putStr :: String -> IO ()@ -- Prints a string to standard output.
 --
 -- /Tip:/ @putStrLn :: String -> IO ()@ -- Prints a string and then a new line to standard output.
-convertInteractive ::
-  IO ()
-convertInteractive =
-  error "todo: Course.Interactive#convertInteractive"
+convertInteractive :: IO ()
+convertInteractive = putStr "Enter the string: " >-
+                     getLine >>= pure . map(toUpper) >>= putStrLn
 
 -- |
 --
@@ -108,10 +107,10 @@ convertInteractive =
 -- /Tip:/ @putStr :: String -> IO ()@ -- Prints a string to standard output.
 --
 -- /Tip:/ @putStrLn :: String -> IO ()@ -- Prints a string and then a new line to standard output.
-reverseInteractive ::
-  IO ()
-reverseInteractive =
-  error "todo: Course.Interactive#reverseInteractive"
+reverseInteractive :: IO ()
+reverseInteractive = putStr "Input filename: " >- getLine >>=
+  \fin -> putStr "Output filename: " >- getLine >>=
+          \fout -> readFile fin >>= pure . reverse >>= writeFile fout
 
 -- |
 --
@@ -134,13 +133,16 @@ reverseInteractive =
 -- /Tip:/ @putStr :: String -> IO ()@ -- Prints a string to standard output.
 --
 -- /Tip:/ @putStrLn :: String -> IO ()@ -- Prints a string and then a new line to standard output.
-encodeInteractive ::
-  IO ()
-encodeInteractive =
-  error "todo: Course.Interactive#encodeInteractive"
+encodeInteractive :: IO ()
+encodeInteractive = putStr "Enter the string: " >-
+                    getLine >>= pure . urlEncode >>= putStrLn where
+  urlEncode url = url >>= \c -> case c of
+                                  ' ' -> "%20"
+                                  '\t' -> "%09"
+                                  '\"' -> "%22"
+                                  _ -> c :. Nil
 
-interactive ::
-  IO ()
+interactive :: IO ()
 interactive =
   let ops = (
                Op 'c' "Convert a string to upper-case" convertInteractive
