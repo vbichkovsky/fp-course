@@ -320,8 +320,76 @@ fromChar _ =
 --
 -- >>> dollars "456789123456789012345678901234567890123456789012345678901234567890.12"
 -- "four hundred and fifty-six vigintillion seven hundred and eighty-nine novemdecillion one hundred and twenty-three octodecillion four hundred and fifty-six septendecillion seven hundred and eighty-nine sexdecillion twelve quindecillion three hundred and forty-five quattuordecillion six hundred and seventy-eight tredecillion nine hundred and one duodecillion two hundred and thirty-four undecillion five hundred and sixty-seven decillion eight hundred and ninety nonillion one hundred and twenty-three octillion four hundred and fifty-six septillion seven hundred and eighty-nine sextillion twelve quintillion three hundred and forty-five quadrillion six hundred and seventy-eight trillion nine hundred and one billion two hundred and thirty-four million five hundred and sixty-seven thousand eight hundred and ninety dollars and twelve cents"
-dollars ::
-  Chars
-  -> Chars
-dollars =
-  error "todo: Course.Cheque#dollars"
+dollars :: Chars -> Chars
+dollars input = let (before, after) = span (/= '.') input
+                    dlrs = pureDollars before
+                    cents = pureCents after
+                in orZero dlrs ++ " dollars and " ++ orZero cents ++ " cents"
+
+orZero :: Chars -> Chars
+orZero Nil = "zero"
+orZero x = x
+
+toGroups :: List Digit -> List Digit3
+toGroups = foldRight folder Nil where
+  folder d ((D2 a b):.rest) = D3 d a b :. rest
+  folder d ((D1 a):.rest) = D2 d a :. rest
+  folder d rest = D1 d :. rest
+
+toCentDigits :: Chars -> Digit3
+toCentDigits input = let digits = take 2 $ listOptional fromChar input
+  in case digits of
+  Nil -> D2 Zero Zero
+  (d:.Nil) -> D2 d Zero
+  (t:.d:._) -> D2 t d
+
+pureCents :: Chars -> Chars
+pureCents = showDigits . toCentDigits
+
+reverseZipWith :: (a -> b -> c) -> List a -> List b -> List c
+reverseZipWith fun la lb = fst $ foldRight folder (Nil,lb) la where
+  folder _ (lc, Nil) = (lc, Nil)  
+  folder a (lc, (b:.bx)) = (fun a b :. lc, bx)
+  
+pureDollars :: Chars -> Chars
+pureDollars input = unwords $ reverseZipWith zipper groups illion where
+  groups = (map showDigits) $ toGroups $ listOptional fromChar input
+  zipper "" _ = ""
+  zipper p "" = p
+  zipper p s = p ++ " " ++ s
+
+tens :: Digit -> Chars
+tens Two   = "twenty"  
+tens Three = "thirty"  
+tens Four  = "fourty"  
+tens Five  = "fifty"   
+tens Six   = "sixty"   
+tens Seven = "seventy" 
+tens Eight = "eighty"  
+tens Nine  = "ninety"
+
+teens :: Digit -> Chars
+teens Zero  = "ten"
+teens One   = "eleven"
+teens Two   = "twelve"  
+teens Three = "thirteen"  
+teens Four  = "fourteen"  
+teens Five  = "fifteen"   
+teens Six   = "sixteen"   
+teens Seven = "seventeen" 
+teens Eight = "eighteen"  
+teens Nine  = "nineteen"
+
+hundred :: Digit -> Chars
+hundred d = showDigit d ++ " hundred"
+
+showDigits :: Digit3 -> Chars
+showDigits (D1 Zero) = Nil
+showDigits (D1 d) = showDigit d
+showDigits (D2 Zero d) = showDigits (D1 d)
+showDigits (D2 One d) = teens d
+showDigits (D2 t Zero) = tens t
+showDigits (D2 t d) = tens t ++ '-' :. showDigits (D1 d)
+showDigits (D3 Zero t d) = showDigits (D2 t d)
+showDigits (D3 h Zero Zero) = hundred h
+showDigits (D3 h t d) = hundred h ++ " and " ++ showDigits (D2 t d)
