@@ -324,11 +324,21 @@ dollars :: Chars -> Chars
 dollars input = let (before, after) = span (/= '.') input
                     dlrs = pureDollars before
                     cents = pureCents after
-                in orZero dlrs ++ " dollars and " ++ orZero cents ++ " cents"
+                in withUnits dlrs "dollar" ++ " and " ++ withUnits cents "cent"
+
+withUnits :: Chars -> Chars -> Chars
+withUnits amount unit = let prefix = orZero amount
+                            ending = takeLast 3 prefix
+                            suffix = if ending /= "one" then "s" else Nil
+                        in prefix ++ " " ++ unit ++ suffix
+
+takeLast :: Int -> List a -> List a
+takeLast n lst = fst $ foldRight folder (Nil, n) lst where
+  folder _ (r,0) = (r,0)
+  folder a (r,x) = (a:.r,x-1)
 
 orZero :: Chars -> Chars
-orZero Nil = "zero"
-orZero x = x
+orZero x = if x == Nil then "zero" else x
 
 toGroups :: List Digit -> List Digit3
 toGroups = foldRight folder Nil where
@@ -352,20 +362,21 @@ reverseZipWith fun la lb = fst $ foldRight folder (Nil,lb) la where
   folder a (lc, (b:.bx)) = (fun a b :. lc, bx)
   
 pureDollars :: Chars -> Chars
-pureDollars input = unwords $ reverseZipWith zipper groups illion where
+pureDollars input = unwords $ filter (/= Nil) illionated where
   groups = (map showDigits) $ toGroups $ listOptional fromChar input
-  zipper "" _ = ""
-  zipper p "" = p
-  zipper p s = p ++ " " ++ s
+  zipper p s |p == Nil = Nil
+             |s == Nil = p
+             |otherwise = p ++ (' ' :. s)
+  illionated = reverseZipWith zipper groups illion
 
 tens :: Digit -> Chars
-tens Two   = "twenty"  
-tens Three = "thirty"  
-tens Four  = "fourty"  
-tens Five  = "fifty"   
-tens Six   = "sixty"   
-tens Seven = "seventy" 
-tens Eight = "eighty"  
+tens Two   = "twenty"
+tens Three = "thirty"
+tens Four  = "forty"
+tens Five  = "fifty"
+tens Six   = "sixty"
+tens Seven = "seventy"
+tens Eight = "eighty"
 tens Nine  = "ninety"
 
 teens :: Digit -> Chars
